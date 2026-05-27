@@ -1,0 +1,68 @@
+data:
+  resource: Log_Caco_Papp_AB
+  type: intake
+  input_col: SMILES
+  target_cols:
+    - Log_Caco_Papp_AB
+  dropna: true
+metadata:
+  authors: Devany West
+  email: devany.west@omsf.io
+  biotargets:
+    - Log_Caco_Papp_AB
+  build_number: 0
+  description: predicting Log_Caco_Papp_AB with recap model
+  driver: pytorch
+  name: recap
+  tag: openadmet
+  tags:
+    - Log_Caco_Papp_AB
+  version: v1
+procedure:
+  feat:
+    type: ChemPropFeaturizer
+    params:
+      batch_size: 128
+      normalize_targets: true
+      n_jobs: 4
+  model:
+    type: ChemPropModel
+    params:
+      batch_size: 128
+      normalize_targets: true
+      n_jobs: 4
+      ffn_hidden_dim: 512
+      ffn_hidden_num_layers: 3
+      mpnn_lr: 1e-4
+      ffn_lr: 1e-3
+      mpnn_weight_decay: 0
+      ffn_weight_decay: 1e-4
+      dropout: 0.25
+      batch_norm: False
+      scheduler: plateau
+      reduce_lr_patience: 5
+      reduce_lr_factor: 0.5
+      n_tasks: 1
+      from_foundation: ../pretraining/foundation_models/best_full_scaling_converted.pt
+  split:
+    type: ShuffleSplitter
+    params:
+      random_state: 42
+      train_size: 0.9
+      val_size: 0.1
+      test_size: 0.0
+  train:
+    type: LightningTrainer
+    params:
+      accelerator: gpu
+      monitor_metric: val_loss
+      gradient_clip_val: 0.5
+      early_stopping: true
+      early_stopping_patience: 10
+      early_stopping_mode: min
+      early_stopping_min_delta: 0.001
+      max_epochs: 200
+      use_wandb: false
+report:
+  eval:
+    - type: RegressionMetrics
